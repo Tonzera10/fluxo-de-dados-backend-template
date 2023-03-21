@@ -21,42 +21,118 @@ app.get("/accounts", (req: Request, res: Response) => {
 })
 
 app.get("/accounts/:id", (req: Request, res: Response) => {
-    const id = req.params.id
+    try{
+        const id = req.params.id
 
-    const result = accounts.find((account) => account.id === id) 
+        if(typeof id !== "string"){
+            return res.status(400).send("'id' deve ser uma string")
+        }
+    
+        const result = accounts.find((account) => account.id === id) 
 
-    res.status(200).send(result)
+        if(!result){
+            res.status(404)
+            throw new Error("Conta não encontrada, verifique o id")
+        }
+    
+        res.status(200).send(result)
+
+    } catch(error: any) {
+        console.log(error)
+        if(res.statusCode === 200){
+            res.status(500)
+        }
+    }
 })
 
 app.delete("/accounts/:id", (req: Request, res: Response) => {
-    const id = req.params.id
+    try {
+        const id = req.params.id
+    
+        if(typeof id !== "string"){
+            return res.status(400).send("'id' deve ser uma string")
+        }
+    
+        const accountIndex = accounts.findIndex((account) => account.id === id)
 
-    const accountIndex = accounts.findIndex((account) => account.id === id)
-
-    if (accountIndex >= 0) {
-        accounts.splice(accountIndex, 1)
+        if(id[0] !== 'a'){
+            res.status(400)
+            throw new Error("Id invalido, deve iniciar com aletra 'a'");           
+        }
+    
+        if (accountIndex >= 0) {
+            accounts.splice(accountIndex, 1)
+        }
+        res.status(200).send("Item deletado com sucesso")
+    
+        
+    } catch (error: any) {
+        console.log(error)
+        if(res.statusCode === 200){
+            res.status(500)
+        }
     }
-
-    res.status(200).send("Item deletado com sucesso")
 })
 
 app.put("/accounts/:id", (req: Request, res: Response) => {
-    const id = req.params.id
+    try {
+        const id = req.params.id
+    
+        const newId = req.body.id as string | undefined
+        const newOwnerName = req.body.ownerName as string | undefined
+        const newBalance = req.body.balance as number | undefined
+        const newType = req.body.type as ACCOUNT_TYPE | undefined
+    
+        const account = accounts.find((account) => account.id === id) 
 
-    const newId = req.body.id as string | undefined
-    const newOwnerName = req.body.ownerName as string | undefined
-    const newBalance = req.body.balance as number | undefined
-    const newType = req.body.type as ACCOUNT_TYPE | undefined
+        if(newId !== undefined){
+            if(newId[0] !== 'a'){
+                res.status(400)
+                throw new Error("Id precisa começar com 'a");
+            }
+        }
 
-    const account = accounts.find((account) => account.id === id) 
+        if(newOwnerName !== undefined){
+            if(newOwnerName.length < 2){
+                res.status(400)
+                throw new Error("OwnerName precisa de pelo menos dois caracteres");
+            }
+        }
 
-    if (account) {
-        account.id = newId || account.id
-        account.ownerName = newOwnerName || account.ownerName
-        account.type = newType || account.type
+        if(newBalance !== undefined){
+            if(typeof newBalance !== "number"){
+                res.status(400)
+                throw new Error("Balance precisa ser um número");
+            }
 
-        account.balance = isNaN(newBalance) ? account.balance : newBalance
+            if(newBalance < 0){
+                res.status(400)
+                throw new Error("Balance precisa ser maior ou igual a zero");
+            }
+        }
+
+        if(newType !== undefined){
+            if(newType !== ACCOUNT_TYPE.BLACK && newType !== ACCOUNT_TYPE.GOLD && newType !== ACCOUNT_TYPE.PLATINUM){
+                res.status(400)
+                throw new Error("O type deve ser um dos types do enum(gold, black ou platinum");
+            }
+        }
+
+    
+        if (account) {
+            account.id = newId || account.id
+            account.ownerName = newOwnerName || account.ownerName
+            account.type = newType || account.type
+    
+            account.balance = isNaN(newBalance) ? account.balance : newBalance
+        }
+    
+        res.status(200).send("Atualização realizada com sucesso")
+        
+    } catch (error: any) {
+        console.log(error)
+        if(res.statusCode === 200){
+            res.status(500).send(error.message)
+        }  
     }
-
-    res.status(200).send("Atualização realizada com sucesso")
 })
